@@ -1,0 +1,30 @@
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Pytest cache
+.pytest_cache/
+
+# Data files
+data/
+
+# Python cache
+src/__pycache__/
+__pycache__/
+*.py[co]
+
+# Virtual environment
+venv/
+
+# Pickle files
+*.pkl
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Log files
+*.log
+
+# OS-specific files
+.DS_Store

@@ -1,5 +1,7 @@
 import os
+import pickle
 import re
+import threading
 import time
 import math
 import tempfile
@@ -10,12 +12,20 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 
+def get_tick_schema() -> pa.Schema:
+    """Returns the schema for tick data."""
+    return pickle.load(open("./tick_schema.pkl", "rb"))
+
+
 class StreamingParquetWriter:
     """
     Simple streaming writer that accepts rows (dicts) and writes Parquet part files automatically.
 
     Note: This implementation only partitions by current date (i.e., all data goes to today's partition).
     """
+
+    writer_counter = 0
+    _lock = threading.Lock()
 
     def __init__(
         self,
@@ -36,9 +46,13 @@ class StreamingParquetWriter:
         self.base_path = base_path
         os.makedirs(self.base_path, exist_ok=True)
 
-        self.today_partition_dir = os.path.join(
-            self.base_path, f"date={(datetime.now().strftime('%Y-%m-%d'))}"
-        )
+        with StreamingParquetWriter._lock:
+            self.today_partition_dir = os.path.join(
+                self.base_path,
+                f"date={(datetime.now().strftime('%Y-%m-%d'))}",
+                f"writer_id={StreamingParquetWriter.writer_counter}",
+            )
+            StreamingParquetWriter.writer_counter += 1
         os.makedirs(self.today_partition_dir, exist_ok=True)
 
         self.schema = schema
@@ -82,7 +96,6 @@ class StreamingParquetWriter:
     # Internal helpers
     # -----------------------
 
-    
     def _calc_next_part_index(self) -> int:
         pat = re.compile(r"^part-(\d{5})\.parquet$")
         max_idx = -1
@@ -103,7 +116,9 @@ class StreamingParquetWriter:
         return os.path.join(folder, name)
 
     def _init_writer(self):
-        assert self.schema is not None, "Schema must be defined before initializing writer."
+        assert (
+            self.schema is not None
+        ), "Schema must be defined before initializing writer."
         temp_filename = self._next_part_filename()
         self.writer = pq.ParquetWriter(
             temp_filename,
@@ -140,10 +155,8 @@ class StreamingParquetWriter:
                 # Close current part file
                 self._close_writer()
                 continue
-            
-            writable_rows = min(
-                capacity, table.num_rows - start_idx
-            )
+
+            writable_rows = min(capacity, table.num_rows - start_idx)
             chunk = table.slice(start_idx, writable_rows)
 
             self.writer.write_table(chunk)

@@ -13,9 +13,7 @@ import threading
 import queue
 import requests
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 def is_trading_day() -> bool:
     today = (

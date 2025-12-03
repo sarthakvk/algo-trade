@@ -1,10 +1,24 @@
-from apscheduler.schedulers.background import BlockingScheduler
+from apscheduler.schedulers.blocking import BlockingScheduler
 from ticks_collector.ticker import Ticker, is_trading_day
 import logging
+from logging.handlers import RotatingFileHandler
 from zoneinfo import ZoneInfo
+import os
 
-logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs"), exist_ok=True)
+
+handler = RotatingFileHandler(
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "scheduler.log"),
+    maxBytes=5_000_000,      # 5 MB
+    backupCount=15           # keep up to 15 log files
+)
+
+formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 ZONEINFO = ZoneInfo("Asia/Kolkata")
 
@@ -21,7 +35,7 @@ def schedule_ticker_jobs(scheduler: BlockingScheduler):
 
 def main():
     scheduler = BlockingScheduler(timezone=ZONEINFO)
-    schedule_ticker_jobs(scheduler)
+    scheduler.add_job(schedule_ticker_jobs, 'cron', hour=9, minute=12, second=0, timezone=ZONEINFO, id='daily_scheduler')
 
     scheduler.start()
 

@@ -1,0 +1,6 @@
+fastapi
+kiteconnect
+pyotp
+pyarrow
+requests
+python-dotenv

@@ -1,20 +1,49 @@
+import random
+from datetime import datetime, timedelta, timezone
 from typing import Iterable
 from kiteconnect import KiteConnect, KiteTicker
 import pyotp
-from kite_utils import KiteSecrets, get_request_token
-from parquet_utils import StreamingParquetWriter, get_tick_schema
+from .kite_utils import KiteSecrets, get_request_token
+from .parquet_utils import StreamingParquetWriter, get_tick_schema
 from itertools import batched
 from functools import partial, lru_cache
 import time
 import logging
 import threading
 import queue
+import requests
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def is_trading_day() -> bool:
+    today = (
+        datetime.now(timezone.utc)
+        .astimezone(timezone(timedelta(hours=5, minutes=30))).date()
+    )
+
+    if today.weekday() >= 5:  # Saturday=5, Sunday=6
+        return False
+
+    headers = {"User-Agent": "Mozilla/5.0"}
+    url = "https://www.nseindia.com/api/holiday-master?type=trading"
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        # date format: '26-Jan-2025'
+        holidays = [datetime.strptime(i["tradingDate"], "%d-%b-%Y").date()
+                    for i in response.json()["CM"]]
+
+        return not (today in holidays)
+    return False
+
 class Ticker:
+    def __new__(cls):
+        # Singleton pattern
+        if not hasattr(cls, "instance"):
+            cls.instance = super(Ticker, cls).__new__(cls)
+        return cls.instance
+
     def __init__(self):
         # Initialise writer once; do not recreate on token refresh
         self._connected = [False] * 3
@@ -51,7 +80,7 @@ class Ticker:
                 for _ in range(3)
             ]
 
-    @lru_cache(maxsize=3)
+    @lru_cache(maxsize=1)
     def get_batched_instrument_tokens(
         self, exchange: str = "NSE", batch_size: int = 3000
     ) -> list[list[int]]:
@@ -59,6 +88,10 @@ class Ticker:
             instrument["instrument_token"]
             for instrument in self.kite.instruments(exchange=exchange)
         ]
+
+        # random shuffle to distribute load
+        random.shuffle(instrument_tokens)
+
         logger.info(f"Total instrument tokens fetched: {len(instrument_tokens)}")
         return list(batched(instrument_tokens, batch_size))
 
@@ -81,7 +114,7 @@ class Ticker:
         try:
             for idx, ticker in enumerate(self.tickers):
                 logger.info(f"Stopping ticker {idx}...")
-                ticker.stop()
+                ticker.close(code=1000, reason="stop")
                 logger.info(f"Ticker {idx} stopped.")
         finally:
             for writer in self.writers:

@@ -120,7 +120,6 @@ class Ticker:
 
     # Callback methods
     def on_ticks(self, idx, ws, ticks):
-        logger.info(f"Ticker {idx} received {len(ticks)} ticks.")
         self.writers[idx].write_rows(ticks)
 
     def on_connect(self, ins_tokens, idx, ws, response):

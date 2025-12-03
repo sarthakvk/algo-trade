@@ -10,7 +10,9 @@ from typing import List, Dict, Optional
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import logging
 
+logger = logging.getLogger(__name__)
 
 def get_tick_schema() -> pa.Schema:
     """Returns the schema for tick data."""
@@ -80,6 +82,7 @@ class StreamingParquetWriter:
         """Add multiple rows at once (list of dicts)."""
         self.buffer.extend(rows)
         if len(self.buffer) >= self.flush_batch_rows:
+            logger.info(f"Flushing {len(self.buffer)} rows to Parquet.")
             self._flush_buffer()
 
     def flush(self):
@@ -91,6 +94,7 @@ class StreamingParquetWriter:
         """Flush remaining, close writer. After this you can optionally run a merge job."""
         self.flush()
         self._close_writer()
+        logger.info("Parquet writer closed.")
 
     # -----------------------
     # Internal helpers
@@ -136,6 +140,8 @@ class StreamingParquetWriter:
             self.writer = None
             self.rows_written = 0
             self.part_index += 1
+
+            logger.info(f"Parquet writer closed for file: {temp_path.replace('.tmp', '')}")
 
     def _flush_buffer(self):
         if not self.buffer:

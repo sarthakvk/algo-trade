@@ -32,3 +32,5 @@ dist/
 .env*
 
 *.parquet
+
+logs/

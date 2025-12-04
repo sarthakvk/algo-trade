@@ -1,3 +1,4 @@
+from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
 from ticks_collector.ticker import Ticker, is_trading_day
 import logging
@@ -42,8 +43,17 @@ def schedule_ticker_jobs(scheduler: BlockingScheduler):
 def main():
     scheduler = BlockingScheduler(timezone=ZONEINFO)
     scheduler.add_job(schedule_ticker_jobs, 'cron', args=[scheduler], hour=9, minute=11, second=0, timezone=ZONEINFO, id='daily_scheduler')
-    logger.info("Scheduler started. Waiting for jobs...")
+    
+    now = datetime.now(ZONEINFO)
+    start_cutoff = now.replace(hour=9, minute=11, second=0, microsecond=0)
+    stop_cutoff = now.replace(hour=15, minute=32, second=0, microsecond=0)
 
+    # If today is trading day and script started after 9:11 but before 15:32
+    if is_trading_day() and start_cutoff < now < stop_cutoff:
+        logger.info("Startup after scheduled time -> scheduling jobs for today.")
+        schedule_ticker_jobs(scheduler)
+    
+    logger.info("Scheduler started. Waiting for jobs...")
     scheduler.start()
 
 

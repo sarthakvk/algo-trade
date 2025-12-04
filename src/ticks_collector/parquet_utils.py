@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 def get_tick_schema() -> pa.Schema:
     """Returns the schema for tick data."""
-    return pickle.load(open("../tick_schema.pkl", "rb"))
+    schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tick_schema.pkl")
+    return pickle.load(open(schema_path, "rb"))
 
 
 class StreamingParquetWriter:

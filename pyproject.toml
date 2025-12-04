@@ -17,6 +17,7 @@ dependencies = [
     "pyotp",
     "fastapi-admin",
     "sqlalchemy",
+    "gunicorn",
 ]
 
 [project.optional-dependencies]

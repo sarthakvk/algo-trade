@@ -23,9 +23,9 @@ def test_schedule_ticker_jobs_on_trading_day(mock_scheduler):
         scheduler.schedule_ticker_jobs(mock_scheduler)
 
         MockTicker.assert_called_once()
-        assert mock_scheduler.add_job.call_count == 2  # start & stop
+        assert mock_scheduler.add_job.call_count == 3  # start & stop
         calls = [c.kwargs.get("id") for c in mock_scheduler.add_job.mock_calls]
-        assert set(calls) == {"start_ticker", "stop_ticker"}
+        assert set(calls) == {"start_ticker", "stop_ticker", "upload_ticks"}
 
 
 def test_schedule_ticker_jobs_not_trading_day(mock_scheduler):
@@ -78,7 +78,10 @@ def test_schedule_ticker_jobs_time_validation(mock_scheduler):
             call(MockTicker.return_value.stop, 'cron',
                  hour=15, minute=32, second=0,
                  timezone=scheduler.ZONEINFO, id='stop_ticker'),
-        ], any_order=True)
+            call(scheduler.upload_ticks_to_s3, 'cron',
+                 hour=15, minute=35, second=0,
+                 timezone=scheduler.ZONEINFO, id='upload_ticks'),
+        ], any_order=False)
 
 
 def test_schedule_ticker_jobs_immediate_time_validation(mock_scheduler):
@@ -97,7 +100,7 @@ def test_schedule_ticker_jobs_immediate_time_validation(mock_scheduler):
             call(scheduler.upload_ticks_to_s3, 'cron',
                  hour=15, minute=35, second=0,
                  timezone=scheduler.ZONEINFO, id='upload_ticks'),
-        ], any_order=True)
+        ], any_order=False)
 
 
 @patch("scheduler.BlockingScheduler")
@@ -149,7 +152,7 @@ def test_main_schedules_daily_job_no_immediate(MockScheduler):
         with pytest.raises(SystemExit):
             scheduler.main()
 
-        mock_sched.add_job.assert_any_call(
+        mock_sched.add_job.assert_called_once_with(
             scheduler.schedule_ticker_jobs,
             'cron',
             args=[mock_sched],

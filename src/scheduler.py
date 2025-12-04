@@ -42,6 +42,7 @@ def schedule_ticker_jobs(scheduler: BlockingScheduler):
         ticker = Ticker()
         scheduler.add_job(ticker.start, 'cron', hour=9, minute=12, second=0, timezone=ZONEINFO, id='start_ticker')
         scheduler.add_job(ticker.stop, 'cron', hour=15, minute=32, second=0, timezone=ZONEINFO, id='stop_ticker')
+        scheduler.add_job(upload_ticks_to_s3, 'cron', hour=15, minute=35, second=0, timezone=ZONEINFO, id='upload_ticks')
         logger.info("Scheduled ticker start and stop jobs for today.")
 
 def schedule_ticker_jobs_immediate(scheduler: BlockingScheduler):

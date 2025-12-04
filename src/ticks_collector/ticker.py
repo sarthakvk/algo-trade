@@ -1,23 +1,19 @@
 import os
 import random
 from datetime import datetime, timedelta, timezone
-from typing import Iterable
 from kiteconnect import KiteConnect, KiteTicker
 import pyotp
 from .kite_utils import KiteSecrets, get_request_token
 from .parquet_utils import StreamingParquetWriter, get_tick_schema
 from itertools import batched
 from functools import partial, lru_cache
-import time
 import logging
-import threading
-import queue
 import requests
+from app_config import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
-
-TICKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ticks")
+TICKS_DIR = os.path.join(os.path.dirname(BASE_DIR), "ticks")
 os.makedirs(TICKS_DIR, exist_ok=True)
 
 

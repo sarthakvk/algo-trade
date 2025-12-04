@@ -2,7 +2,7 @@ import os
 import boto3
 from .ticker import TICKS_DIR
 import pathlib
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,5 +28,13 @@ def upload_parquet_folder_to_s3(dir: str):
                     upload_file_to_s3, file_path, bucket_name, s3_key.as_posix()
                 )
             )
+        total_files = len(futures)
+        logger.info(f"Starting upload of {total_files} files to S3 from {dir}")
 
-        wait(futures)
+        for idx, future in enumerate(as_completed(futures)):
+            try:
+                future.result()
+                logger.info(f"Uploaded {idx + 1}/{total_files} files to S3")
+            except Exception as e:
+                logger.error(f"Error uploading file: {e}")
+                raise e

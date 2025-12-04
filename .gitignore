@@ -35,3 +35,5 @@ dist/
 *.parquet
 
 logs/
+
+*.sqlite3

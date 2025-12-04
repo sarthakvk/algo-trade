@@ -14,6 +14,7 @@ __pycache__/
 
 # Virtual environment
 venv/
+venv_*/
 
 # Pickle files
 *.pkl

@@ -221,3 +221,48 @@ def test_main_schedules_daily_job_no_immediate(MockScheduler):
             id="daily_scheduler",
         )
         mock_immediate.assert_not_called()
+
+
+@pytest.fixture(autouse=True)
+def cleanup_pid():
+    # runs before and after each test
+    if os.path.exists(scheduler.PID_FILE):
+        os.remove(scheduler.PID_FILE)
+    yield
+    if os.path.exists(scheduler.PID_FILE):
+        os.remove(scheduler.PID_FILE)
+
+def test_write_pid_creates_file():
+    scheduler.write_pid()
+    assert os.path.exists(scheduler.PID_FILE)
+
+
+def test_exit_if_running_exits(monkeypatch):
+    # simulate running process
+    scheduler.write_pid()
+    pid = os.getpid()  # pretend current test process is the scheduler
+    with open(scheduler.PID_FILE, "w") as f:
+        f.write(str(pid))
+
+    with pytest.raises(SystemExit):
+        scheduler.exit_if_already_running()  # should exit since pid is valid
+
+
+def test_stale_pid_does_not_exit(tmp_path, monkeypatch):
+    # write stale pid
+    with open(scheduler.PID_FILE, "w") as f:
+        f.write("999999")  # unlikely process
+
+    scheduler.exit_if_already_running()
+    # stale pid removed
+    assert not os.path.exists(scheduler.PID_FILE)
+
+
+def test_pid_removed_on_atexit(monkeypatch):
+    # call cleanup and ensure pid gone
+    scheduler.write_pid()
+    assert os.path.exists(scheduler.PID_FILE)
+
+    from scheduler import remove_pid
+    remove_pid()
+    assert not os.path.exists(scheduler.PID_FILE)

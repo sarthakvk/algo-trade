@@ -1,4 +1,6 @@
+import atexit
 from datetime import datetime
+import signal
 from apscheduler.schedulers.blocking import BlockingScheduler
 from ticks_collector.ticker import Ticker, is_trading_day, TICKS_DIR
 import logging
@@ -11,12 +13,15 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.propagate = False
 
+PID_FILE = "/tmp/scheduler.pid"
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+
 os.makedirs(
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs"), exist_ok=True
+    LOG_DIR, exist_ok=True
 )
 
 file_handler = RotatingFileHandler(
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "scheduler.log"),
+    os.path.join(LOG_DIR, "scheduler.log"),
     maxBytes=5_000_000,  # 5 MB
     backupCount=15,  # keep up to 15 log files
 )
@@ -94,7 +99,9 @@ def schedule_ticker_jobs_immediate(scheduler: BlockingScheduler):
             timezone=ZONEINFO,
             id="upload_ticks",
         )
-        logger.info("Scheduled ticker stop job for today after immediate start.")
+        logger.info(
+            "Scheduled ticker stop job and s3 upload for today after immediate start."
+        )
 
 
 def main():
@@ -123,5 +130,38 @@ def main():
     scheduler.start()
 
 
+def remove_pid():
+    if os.path.exists(PID_FILE):
+        os.remove(PID_FILE)
+
+
+def write_pid():
+    with open(PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+
+def exit_if_already_running():
+    if os.path.exists(PID_FILE):
+        with open(PID_FILE) as f:
+            pid = int(f.read())
+        try:
+            os.kill(pid, 0)  # check if alive
+            print("scheduler already running")
+            exit(0)
+        except ProcessLookupError:
+            # stale pid
+            os.remove(PID_FILE)
+
+
 if __name__ == "__main__":
+    exit_if_already_running()
+    # register atexit handler to remove PID file
+    atexit.register(remove_pid)
+
+    # handle kill signals gracefully
+    signal.signal(signal.SIGTERM, lambda *args: exit(0))
+    signal.signal(signal.SIGINT, lambda *args: exit(0))
+
+    write_pid()
+
     main()

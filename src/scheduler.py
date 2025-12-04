@@ -39,6 +39,12 @@ def schedule_ticker_jobs(scheduler: BlockingScheduler):
         scheduler.add_job(ticker.stop, 'cron', hour=15, minute=32, second=0, timezone=ZONEINFO, id='stop_ticker')
         logger.info("Scheduled ticker start and stop jobs for today.")
 
+def schedule_ticker_jobs_immediate(scheduler: BlockingScheduler):
+    if is_trading_day():
+        ticker = Ticker()
+        ticker.start()
+        scheduler.add_job(ticker.stop, 'cron', hour=15, minute=32, second=0, timezone=ZONEINFO, id='stop_ticker')
+        logger.info("Scheduled ticker stop job for today after immediate start.")
 
 def main():
     scheduler = BlockingScheduler(timezone=ZONEINFO)
@@ -51,7 +57,7 @@ def main():
     # If today is trading day and script started after 9:11 but before 15:32
     if is_trading_day() and start_cutoff < now < stop_cutoff:
         logger.info("Startup after scheduled time -> scheduling jobs for today.")
-        schedule_ticker_jobs(scheduler)
+        schedule_ticker_jobs_immediate(scheduler)
     
     logger.info("Scheduler started. Waiting for jobs...")
     scheduler.start()

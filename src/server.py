@@ -1,7 +1,5 @@
 from contextlib import asynccontextmanager
 import fastapi
-from app_config import ZONEINFO
-from apscheduler.schedulers.background import BackgroundScheduler
 from scheduler import schedule_jobs
 from ticks_collector.s3_utils import upload_parquet_folder_to_s3
 from ticks_collector.ticker import TICKS_DIR

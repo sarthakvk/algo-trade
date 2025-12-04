@@ -7,7 +7,7 @@ from os import environ as env
 
 import dotenv
 
-dotenv.load_dotenv("../.env")  # Load .env variables
+dotenv.load_dotenv(dotenv.find_dotenv())  # Load .env variables
 
 
 class KiteSecrets(Enum):

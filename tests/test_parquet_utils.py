@@ -7,12 +7,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-# Ensure /src is importable
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT / "src"
-sys.path.append(str(SRC_DIR))
-
-from parquet_utils import StreamingParquetWriter  # noqa: E402
+from ticks_collector.parquet_utils import StreamingParquetWriter  # noqa: E402
 
 
 def today_partition_dir(base_path: str) -> str:
@@ -172,7 +167,7 @@ def test_partition_dir_created_and_no_files_before_flush(tmp_path):
         base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=5, compression="ZSTD"
     )
 
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
     assert os.path.isdir(partition_dir), "Partition directory not created"
 
     # Add fewer rows than flush threshold: no file should be created yet
@@ -195,7 +190,7 @@ def test_flush_and_close_writes_single_part(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=100, flush_batch_rows=3, compression="ZSTD"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     # Trigger a flush by reaching flush_batch_rows
     rows = make_rows(3)
@@ -229,7 +224,7 @@ def test_rollover_creates_multiple_parts(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=5, flush_batch_rows=4, compression="SNAPPY"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     # 12 rows with part size 5 => parts: 5, 5, 2
     rows = make_rows(12)
@@ -255,18 +250,19 @@ def test_rollover_creates_multiple_parts(tmp_path):
 
 def test_resumes_part_index_from_existing_files(tmp_path):
     base = str(tmp_path)
-    partition_dir = today_partition_dir(base)
-    os.makedirs(partition_dir, exist_ok=True)
+    writer = StreamingParquetWriter(
+        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
+    )
+    partition_dir = writer.today_partition_dir
 
     # Pre-create existing parts: 00000, 00002, 00007
     for idx in [0, 2, 7]:
         path = os.path.join(partition_dir, f"part-{idx:05d}.parquet")
         # Write a tiny valid parquet so pyarrow can open if needed
         pq.write_table(pa.Table.from_pydict({"x": [idx]}), path)
+    
+    writer.part_index = writer._calc_next_part_index()
 
-    writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
-    )
 
     # Write a couple rows and close
     writer.write_rows(make_rows(2))
@@ -283,7 +279,7 @@ def test_flush_noop_when_empty(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=5, compression="ZSTD"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     # No data yet
     writer.flush()
@@ -300,7 +296,7 @@ def test_exact_boundary_rollover(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=5, flush_batch_rows=10, compression="ZSTD"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     # Write exactly rows_per_part, then one more to force rollover to next part
     writer.write_rows(make_rows(5))
@@ -326,7 +322,7 @@ def test_multiple_small_flushes_accumulate(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=100, flush_batch_rows=3, compression="ZSTD"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     # 5 small batches; automatic flush may happen when threshold reached across calls
     for i in range(5):
@@ -350,7 +346,7 @@ def test_idempotent_close_and_flush_after_close(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     writer.write_rows(make_rows(3))
     writer.close()
@@ -371,7 +367,7 @@ def test_empty_write_rows_is_noop(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     writer.write_rows([])
     writer.flush()
@@ -400,7 +396,7 @@ def test_round_trip_field_values(tmp_path):
     writer.write_rows(rows[4:])
     writer.close()
 
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
     parts = list_parts(partition_dir)
     table = pq.read_table(parts[0])
 
@@ -420,7 +416,7 @@ def test_large_batch_split_across_parts(tmp_path):
     writer = StreamingParquetWriter(
         base_path=base, schema=schema_sample(), rows_per_part=50, flush_batch_rows=1000, compression="SNAPPY"
     )
-    partition_dir = today_partition_dir(base)
+    partition_dir = writer.today_partition_dir
 
     rows = make_rows(135)
     writer.write_rows(rows)  # single large batch triggers internal chunking
@@ -439,19 +435,21 @@ def test_large_batch_split_across_parts(tmp_path):
 
 def test_part_index_ignores_tmp_files(tmp_path):
     base = str(tmp_path)
-    partition_dir = today_partition_dir(base)
-    os.makedirs(partition_dir, exist_ok=True)
+    writer = StreamingParquetWriter(
+        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
+    )
+    partition_dir = writer.today_partition_dir
 
     # Create finalized parts and stray tmp files
     for idx in [0, 1]:
         pq.write_table(pa.Table.from_pydict({"x": [idx]}), os.path.join(partition_dir, f"part-{idx:05d}.parquet"))
     for stray in [3, 5]:
         open(os.path.join(partition_dir, f"part-{stray:05d}.parquet.tmp"), "w").close()
+    
+    writer.part_index = writer._calc_next_part_index()
 
-    writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
-    )
     writer.write_rows(make_rows(2))
+    assert len(writer.buffer) == 0
     writer.close()
 
     parts = list_parts(partition_dir)

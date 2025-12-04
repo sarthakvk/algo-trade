@@ -1,10 +1,11 @@
 from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
-from ticks_collector.ticker import Ticker, is_trading_day
+from ticks_collector.ticker import Ticker, is_trading_day, TICKS_DIR
 import logging
 from logging.handlers import RotatingFileHandler
 from zoneinfo import ZoneInfo
 import os
+from ticks_collector.s3_utils import upload_parquet_folder_to_s3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -28,8 +29,13 @@ logger.addHandler(stream_handler)
 
 ZONEINFO = ZoneInfo("Asia/Kolkata")
 
-def test_task():
-    logger.info("Test task executed.")
+
+def upload_ticks_to_s3():
+    today_dir_name = f"date={(datetime.now().strftime('%Y-%m-%d'))}"
+    today_dir_path = os.path.join(TICKS_DIR, today_dir_name)
+    logger.info(f"Uploading ticks from {today_dir_path} to S3...")
+    upload_parquet_folder_to_s3(today_dir_path)
+
 
 def schedule_ticker_jobs(scheduler: BlockingScheduler):
     if is_trading_day():
@@ -43,6 +49,7 @@ def schedule_ticker_jobs_immediate(scheduler: BlockingScheduler):
         ticker = Ticker()
         ticker.start()
         scheduler.add_job(ticker.stop, 'cron', hour=15, minute=32, second=0, timezone=ZONEINFO, id='stop_ticker')
+        scheduler.add_job(upload_ticks_to_s3, 'cron', hour=15, minute=35, second=0, timezone=ZONEINFO, id='upload_ticks')
         logger.info("Scheduled ticker stop job for today after immediate start.")
 
 def main():

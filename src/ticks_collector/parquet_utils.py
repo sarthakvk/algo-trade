@@ -14,9 +14,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def get_tick_schema() -> pa.Schema:
     """Returns the schema for tick data."""
-    schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tick_schema.pkl")
+    schema_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "tick_schema.pkl"
+    )
     return pickle.load(open(schema_path, "rb"))
 
 
@@ -142,7 +145,9 @@ class StreamingParquetWriter:
             self.rows_written = 0
             self.part_index += 1
 
-            logger.info(f"Parquet writer closed for file: {temp_path.replace('.tmp', '')}")
+            logger.info(
+                f"Parquet writer closed for file: {temp_path.replace('.tmp', '')}"
+            )
 
     def _flush_buffer(self):
         if not self.buffer:

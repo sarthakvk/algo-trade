@@ -17,99 +17,128 @@ def today_partition_dir(base_path: str) -> str:
 
 def schema_sample() -> pa.Schema:
     # Actual nested schema
-    return pa.schema([
-        pa.field("tradable", pa.bool_()),
-        pa.field("mode", pa.string()),
-        pa.field("instrument_token", pa.int64()),
-        pa.field("last_price", pa.float64()),
-        pa.field(
-            "ohlc",
-            pa.struct([
-                pa.field("close", pa.float64()),
-                pa.field("high", pa.float64()),
-                pa.field("low", pa.float64()),
-                pa.field("open", pa.float64()),
-            ])
-        ),
-        pa.field("change", pa.float64()),
-        pa.field("exchange_timestamp", pa.timestamp("ns")),
-        pa.field("last_traded_quantity", pa.float64()),
-        pa.field("average_traded_price", pa.float64()),
-        pa.field("volume_traded", pa.float64()),
-        pa.field("total_buy_quantity", pa.float64()),
-        pa.field("total_sell_quantity", pa.float64()),
-        pa.field("last_trade_time", pa.timestamp("ns")),
-        pa.field("oi", pa.float64()),
-        pa.field("oi_day_high", pa.float64()),
-        pa.field("oi_day_low", pa.float64()),
-        pa.field(
-            "depth",
-            pa.struct([
-                pa.field(
-                    "buy",
-                    pa.list_(
-                        pa.struct([
-                            pa.field("orders", pa.int64()),
-                            pa.field("price", pa.float64()),
-                            pa.field("quantity", pa.int64()),
-                        ])
-                    )
+    return pa.schema(
+        [
+            pa.field("tradable", pa.bool_()),
+            pa.field("mode", pa.string()),
+            pa.field("instrument_token", pa.int64()),
+            pa.field("last_price", pa.float64()),
+            pa.field(
+                "ohlc",
+                pa.struct(
+                    [
+                        pa.field("close", pa.float64()),
+                        pa.field("high", pa.float64()),
+                        pa.field("low", pa.float64()),
+                        pa.field("open", pa.float64()),
+                    ]
                 ),
-                pa.field(
-                    "sell",
-                    pa.list_(
-                        pa.struct([
-                            pa.field("orders", pa.int64()),
-                            pa.field("price", pa.float64()),
-                            pa.field("quantity", pa.int64()),
-                        ])
-                    )
+            ),
+            pa.field("change", pa.float64()),
+            pa.field("exchange_timestamp", pa.timestamp("ns")),
+            pa.field("last_traded_quantity", pa.float64()),
+            pa.field("average_traded_price", pa.float64()),
+            pa.field("volume_traded", pa.float64()),
+            pa.field("total_buy_quantity", pa.float64()),
+            pa.field("total_sell_quantity", pa.float64()),
+            pa.field("last_trade_time", pa.timestamp("ns")),
+            pa.field("oi", pa.float64()),
+            pa.field("oi_day_high", pa.float64()),
+            pa.field("oi_day_low", pa.float64()),
+            pa.field(
+                "depth",
+                pa.struct(
+                    [
+                        pa.field(
+                            "buy",
+                            pa.list_(
+                                pa.struct(
+                                    [
+                                        pa.field("orders", pa.int64()),
+                                        pa.field("price", pa.float64()),
+                                        pa.field("quantity", pa.int64()),
+                                    ]
+                                )
+                            ),
+                        ),
+                        pa.field(
+                            "sell",
+                            pa.list_(
+                                pa.struct(
+                                    [
+                                        pa.field("orders", pa.int64()),
+                                        pa.field("price", pa.float64()),
+                                        pa.field("quantity", pa.int64()),
+                                    ]
+                                )
+                            ),
+                        ),
+                    ]
                 ),
-            ])
-        ),
-        pa.field("name", pa.string()),
-    ])
+            ),
+            pa.field("name", pa.string()),
+        ]
+    )
 
 
 def make_rows(n, start=0):
     from datetime import datetime
+
     rows = []
     now = datetime.now()
     for i in range(start, start + n):
-        rows.append({
-            "tradable": (i % 2 == 0),
-            "mode": "full",
-            "instrument_token": 100000 + i,
-            "last_price": float(i) + 100.0,
-            "ohlc": {
-                "close": float(i) + 1.0,
-                "high": float(i) + 2.0,
-                "low": float(i) - 1.0,
-                "open": float(i) + 0.5,
-            },
-            "change": 0.01 * i,
-            "exchange_timestamp": now,
-            "last_traded_quantity": float((i % 10) + 1),
-            "average_traded_price": float(i) + 0.75,
-            "volume_traded": float(i * 10),
-            "total_buy_quantity": float(i * 5 + 10),
-            "total_sell_quantity": float(i * 5 + 8),
-            "last_trade_time": now,
-            "oi": float(1000 + i),
-            "oi_day_high": float(1100 + i),
-            "oi_day_low": float(900 + i),
-            "depth": {
-                "buy": [
-                    {"orders": 10 + i, "price": float(i) + 99.5, "quantity": 1 + (i % 3)},
-                    {"orders": 11 + i, "price": float(i) + 99.0, "quantity": 2 + (i % 3)},
-                ],
-                "sell": [
-                    {"orders": 12 + i, "price": float(i) + 100.5, "quantity": 1 + (i % 3)},
-                    {"orders": 13 + i, "price": float(i) + 101.0, "quantity": 2 + (i % 3)},
-                ],
-            },
-            "name": f"name-{i}",
-        })
+        rows.append(
+            {
+                "tradable": (i % 2 == 0),
+                "mode": "full",
+                "instrument_token": 100000 + i,
+                "last_price": float(i) + 100.0,
+                "ohlc": {
+                    "close": float(i) + 1.0,
+                    "high": float(i) + 2.0,
+                    "low": float(i) - 1.0,
+                    "open": float(i) + 0.5,
+                },
+                "change": 0.01 * i,
+                "exchange_timestamp": now,
+                "last_traded_quantity": float((i % 10) + 1),
+                "average_traded_price": float(i) + 0.75,
+                "volume_traded": float(i * 10),
+                "total_buy_quantity": float(i * 5 + 10),
+                "total_sell_quantity": float(i * 5 + 8),
+                "last_trade_time": now,
+                "oi": float(1000 + i),
+                "oi_day_high": float(1100 + i),
+                "oi_day_low": float(900 + i),
+                "depth": {
+                    "buy": [
+                        {
+                            "orders": 10 + i,
+                            "price": float(i) + 99.5,
+                            "quantity": 1 + (i % 3),
+                        },
+                        {
+                            "orders": 11 + i,
+                            "price": float(i) + 99.0,
+                            "quantity": 2 + (i % 3),
+                        },
+                    ],
+                    "sell": [
+                        {
+                            "orders": 12 + i,
+                            "price": float(i) + 100.5,
+                            "quantity": 1 + (i % 3),
+                        },
+                        {
+                            "orders": 13 + i,
+                            "price": float(i) + 101.0,
+                            "quantity": 2 + (i % 3),
+                        },
+                    ],
+                },
+                "name": f"name-{i}",
+            }
+        )
     return rows
 
 
@@ -158,13 +187,19 @@ def assert_compression_is(path: str, expected: str):
     pf = pq.ParquetFile(path)
     # Check compression of first column in first row group
     comp = pf.metadata.row_group(0).column(0).compression
-    assert comp.upper() == expected.upper(), f"Expected compression {expected}, got {comp}"
+    assert (
+        comp.upper() == expected.upper()
+    ), f"Expected compression {expected}, got {comp}"
 
 
 def test_partition_dir_created_and_no_files_before_flush(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=5, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=5,
+        compression="ZSTD",
     )
 
     partition_dir = writer.today_partition_dir
@@ -188,7 +223,11 @@ def test_partition_dir_created_and_no_files_before_flush(tmp_path):
 def test_flush_and_close_writes_single_part(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=100, flush_batch_rows=3, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=100,
+        flush_batch_rows=3,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -222,15 +261,21 @@ def test_flush_and_close_writes_single_part(tmp_path):
 def test_rollover_creates_multiple_parts(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=5, flush_batch_rows=4, compression="SNAPPY"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=5,
+        flush_batch_rows=4,
+        compression="SNAPPY",
     )
     partition_dir = writer.today_partition_dir
 
     # 12 rows with part size 5 => parts: 5, 5, 2
     rows = make_rows(12)
-    writer.write_rows(rows[:4])   # no flush to disk yet
-    writer.write_rows(rows[4:8])  # triggers flush (>=4), may open writer and write 8 rows -> 5 then 3
-    writer.write_rows(rows[8:12]) # triggers another flush
+    writer.write_rows(rows[:4])  # no flush to disk yet
+    writer.write_rows(
+        rows[4:8]
+    )  # triggers flush (>=4), may open writer and write 8 rows -> 5 then 3
+    writer.write_rows(rows[8:12])  # triggers another flush
     writer.close()
 
     parts = list_parts(partition_dir)
@@ -251,7 +296,11 @@ def test_rollover_creates_multiple_parts(tmp_path):
 def test_resumes_part_index_from_existing_files(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=2,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -260,9 +309,8 @@ def test_resumes_part_index_from_existing_files(tmp_path):
         path = os.path.join(partition_dir, f"part-{idx:05d}.parquet")
         # Write a tiny valid parquet so pyarrow can open if needed
         pq.write_table(pa.Table.from_pydict({"x": [idx]}), path)
-    
-    writer.part_index = writer._calc_next_part_index()
 
+    writer.part_index = writer._calc_next_part_index()
 
     # Write a couple rows and close
     writer.write_rows(make_rows(2))
@@ -270,14 +318,20 @@ def test_resumes_part_index_from_existing_files(tmp_path):
 
     parts = list_parts(partition_dir)
     # Should have created part-00008 as the next index
-    assert any(p.endswith("part-00008.parquet") for p in parts), f"Expected part-00008.parquet, got {parts}"
+    assert any(
+        p.endswith("part-00008.parquet") for p in parts
+    ), f"Expected part-00008.parquet, got {parts}"
     assert_no_tmp_files(partition_dir)
 
 
 def test_flush_noop_when_empty(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=5, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=5,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -294,7 +348,11 @@ def test_flush_noop_when_empty(tmp_path):
 def test_exact_boundary_rollover(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=5, flush_batch_rows=10, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=5,
+        flush_batch_rows=10,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -320,7 +378,11 @@ def test_exact_boundary_rollover(tmp_path):
 def test_multiple_small_flushes_accumulate(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=100, flush_batch_rows=3, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=100,
+        flush_batch_rows=3,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -344,7 +406,11 @@ def test_multiple_small_flushes_accumulate(tmp_path):
 def test_idempotent_close_and_flush_after_close(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=2,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -365,7 +431,11 @@ def test_idempotent_close_and_flush_after_close(tmp_path):
 def test_empty_write_rows_is_noop(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=2,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
@@ -379,7 +449,11 @@ def test_empty_write_rows_is_noop(tmp_path):
 def test_write_row_none_raises_on_flush(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=1, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=1,
+        compression="ZSTD",
     )
     # Without input validation, pyarrow should raise during conversion on flush
     with pytest.raises(Exception):
@@ -390,7 +464,11 @@ def test_round_trip_field_values(tmp_path):
     base = str(tmp_path)
     rows = make_rows(7)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=4, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=4,
+        compression="ZSTD",
     )
     writer.write_rows(rows[:4])
     writer.write_rows(rows[4:])
@@ -402,7 +480,11 @@ def test_round_trip_field_values(tmp_path):
 
     # Validate a subset of fields and nested structures via to_pylist for portability
     lp = table.column("last_price").to_pylist()
-    assert lp[:3] == [rows[0]["last_price"], rows[1]["last_price"], rows[2]["last_price"]]
+    assert lp[:3] == [
+        rows[0]["last_price"],
+        rows[1]["last_price"],
+        rows[2]["last_price"],
+    ]
 
     ohlc = table.column("ohlc").to_pylist()
     assert ohlc[0]["high"] == rows[0]["ohlc"]["high"]
@@ -414,7 +496,11 @@ def test_round_trip_field_values(tmp_path):
 def test_large_batch_split_across_parts(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=50, flush_batch_rows=1000, compression="SNAPPY"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=50,
+        flush_batch_rows=1000,
+        compression="SNAPPY",
     )
     partition_dir = writer.today_partition_dir
 
@@ -436,16 +522,23 @@ def test_large_batch_split_across_parts(tmp_path):
 def test_part_index_ignores_tmp_files(tmp_path):
     base = str(tmp_path)
     writer = StreamingParquetWriter(
-        base_path=base, schema=schema_sample(), rows_per_part=10, flush_batch_rows=2, compression="ZSTD"
+        base_path=base,
+        schema=schema_sample(),
+        rows_per_part=10,
+        flush_batch_rows=2,
+        compression="ZSTD",
     )
     partition_dir = writer.today_partition_dir
 
     # Create finalized parts and stray tmp files
     for idx in [0, 1]:
-        pq.write_table(pa.Table.from_pydict({"x": [idx]}), os.path.join(partition_dir, f"part-{idx:05d}.parquet"))
+        pq.write_table(
+            pa.Table.from_pydict({"x": [idx]}),
+            os.path.join(partition_dir, f"part-{idx:05d}.parquet"),
+        )
     for stray in [3, 5]:
         open(os.path.join(partition_dir, f"part-{stray:05d}.parquet.tmp"), "w").close()
-    
+
     writer.part_index = writer._calc_next_part_index()
 
     writer.write_rows(make_rows(2))
@@ -454,7 +547,12 @@ def test_part_index_ignores_tmp_files(tmp_path):
 
     parts = list_parts(partition_dir)
     # Next index after 00001 should be 00002, ignoring tmp files
-    assert any(p.endswith("part-00002.parquet") for p in parts), f"Expected part-00002.parquet, got {parts}"
+    assert any(
+        p.endswith("part-00002.parquet") for p in parts
+    ), f"Expected part-00002.parquet, got {parts}"
     # Implementation does not clean pre-existing stray tmp files; they may remain
     tmps = list_tmp_parts(partition_dir)
-    assert set(os.path.basename(p) for p in tmps) >= {"part-00003.parquet.tmp", "part-00005.parquet.tmp"}
+    assert set(os.path.basename(p) for p in tmps) >= {
+        "part-00003.parquet.tmp",
+        "part-00005.parquet.tmp",
+    }

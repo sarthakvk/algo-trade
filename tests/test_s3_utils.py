@@ -4,6 +4,7 @@ import pathlib
 from unittest.mock import patch, MagicMock
 from ticks_collector.s3_utils import upload_file_to_s3, upload_parquet_folder_to_s3
 
+
 @patch("boto3.client")
 def test_upload_file_to_s3(mock_boto_client):
     mock_s3 = MagicMock()
@@ -12,9 +13,7 @@ def test_upload_file_to_s3(mock_boto_client):
     upload_file_to_s3("sample.parquet", "test-bucket", "folder/sample.parquet")
 
     mock_s3.upload_file.assert_called_once_with(
-        "sample.parquet",
-        "test-bucket",
-        "folder/sample.parquet"
+        "sample.parquet", "test-bucket", "folder/sample.parquet"
     )
 
 

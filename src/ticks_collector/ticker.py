@@ -20,10 +20,12 @@ logger = logging.getLogger(__name__)
 TICKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ticks")
 os.makedirs(TICKS_DIR, exist_ok=True)
 
+
 def is_trading_day() -> bool:
     today = (
         datetime.now(timezone.utc)
-        .astimezone(timezone(timedelta(hours=5, minutes=30))).date()
+        .astimezone(timezone(timedelta(hours=5, minutes=30)))
+        .date()
     )
 
     if today.weekday() >= 5:  # Saturday=5, Sunday=6
@@ -34,11 +36,14 @@ def is_trading_day() -> bool:
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         # date format: '26-Jan-2025'
-        holidays = [datetime.strptime(i["tradingDate"], "%d-%b-%Y").date()
-                    for i in response.json()["CM"]]
+        holidays = [
+            datetime.strptime(i["tradingDate"], "%d-%b-%Y").date()
+            for i in response.json()["CM"]
+        ]
 
         return not (today in holidays)
     return False
+
 
 class Ticker:
     def __new__(cls):

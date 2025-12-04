@@ -21,8 +21,12 @@ def upload_parquet_folder_to_s3(dir: str):
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = []
-        for file_path in dir.rglob('*.parquet'):
+        for file_path in dir.rglob("*.parquet"):
             s3_key = dir.name / file_path.relative_to(dir)
-            futures.append(executor.submit(upload_file_to_s3, file_path, bucket_name, s3_key.as_posix()))
+            futures.append(
+                executor.submit(
+                    upload_file_to_s3, file_path, bucket_name, s3_key.as_posix()
+                )
+            )
 
         wait(futures)

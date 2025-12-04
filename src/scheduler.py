@@ -6,8 +6,9 @@ from logging.handlers import RotatingFileHandler
 from zoneinfo import ZoneInfo
 import os
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+logger.propagate = False
 
 os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs"), exist_ok=True)
 
@@ -24,8 +25,6 @@ file_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
-
-logger.propagate = False
 
 ZONEINFO = ZoneInfo("Asia/Kolkata")
 

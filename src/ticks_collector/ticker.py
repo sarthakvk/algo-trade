@@ -1,3 +1,4 @@
+import os
 import random
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
@@ -14,6 +15,10 @@ import queue
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+TICKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ticks")
+os.makedirs(TICKS_DIR, exist_ok=True)
 
 def is_trading_day() -> bool:
     today = (

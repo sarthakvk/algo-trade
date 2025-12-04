@@ -41,7 +41,7 @@ def schedule_ticker_jobs(scheduler: BlockingScheduler):
 
 def main():
     scheduler = BlockingScheduler(timezone=ZONEINFO)
-    scheduler.add_job(schedule_ticker_jobs, 'cron', args=[scheduler], hour=9, minute=12, second=0, timezone=ZONEINFO, id='daily_scheduler')
+    scheduler.add_job(schedule_ticker_jobs, 'cron', args=[scheduler], hour=9, minute=11, second=0, timezone=ZONEINFO, id='daily_scheduler')
     logger.info("Scheduler started. Waiting for jobs...")
 
     scheduler.start()

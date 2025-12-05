@@ -36,7 +36,7 @@ async def trigger_s3_upload(date: datetime.date | None = None):
             detail="Manual S3 upload is already scheduled or running",
         )
     if date is not None:
-        date_str = date.strftime('%Y-%m-%d')
+        date_str = date.strftime("%Y-%m-%d")
         dir_to_upload = TICKS_DIR + f"/date={date_str}"
     else:
         dir_to_upload = TICKS_DIR

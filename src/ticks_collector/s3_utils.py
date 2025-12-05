@@ -18,11 +18,12 @@ def upload_parquet_folder_to_s3(dir: str):
     # Implement the logic to upload the ticks folder to S3
     bucket_name = "ticks-data-bucket"
     dir: pathlib.Path = pathlib.Path(dir)
+    ticks_root_dir = pathlib.Path(TICKS_DIR)
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = []
         for file_path in dir.rglob("*.parquet"):
-            s3_key = dir.name / file_path.relative_to(dir)
+            s3_key = file_path.relative_to(ticks_root_dir)
             futures.append(
                 executor.submit(
                     upload_file_to_s3, file_path, bucket_name, s3_key.as_posix()

@@ -78,4 +78,4 @@ def ticks_collector_job(scheduler: BackgroundScheduler):
             logger.info("Ticker stopped.")
             break
 
-    scheduler.add_job(upload_ticks_to_s3, id="upload_ticks_to_s3")
+    scheduler.add_job(upload_ticks_to_s3, id="upload_ticks_to_s3", args=[scheduler])

@@ -14,35 +14,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 logger = logging.getLogger(__name__)
 
 
-def drop_ticks_from_disk_after_verification():
-    """Verify that today's ticks have been uploaded to S3, then delete local files."""
-
-    today_dir_name = get_today_ds(ZONEINFO)
-    today_dir_path = os.path.join(TICKS_DIR, today_dir_name)
-
-    # Verify all parquet files for today exist in S3
-    verification_successful = verify_parquet_folder_uploaded_to_s3(today_dir_path)
-
-    if verification_successful:
-        import shutil
-
-        shutil.rmtree(today_dir_path)
-        logger.info(f"Deleted local ticks data at {today_dir_path} after verification.")
-    else:
-        logger.warning(
-            f"Verification failed for ticks data at {today_dir_path}. Not deleting."
-        )
-
-
 def upload_ticks_to_s3(scheduler: BackgroundScheduler):
     today_dir_name = get_today_ds(ZONEINFO)
     today_dir_path = os.path.join(TICKS_DIR, today_dir_name)
     logger.info(f"Uploading ticks from {today_dir_path} to S3...")
-    upload_parquet_folder_to_s3(today_dir_path)
-
-    scheduler.add_job(
-        drop_ticks_from_disk_after_verification, id="drop_ticks_after_verification"
-    )
+    upload_parquet_folder_to_s3(today_dir_path, True)
 
 
 def ticks_collector_job(scheduler: BackgroundScheduler):

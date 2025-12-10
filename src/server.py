@@ -2,7 +2,10 @@ from contextlib import asynccontextmanager
 import datetime
 import fastapi
 from scheduler import schedule_jobs
-from ticks_collector.s3_utils import upload_parquet_folder_to_s3
+from ticks_collector.s3_utils import (
+    upload_parquet_folder_to_s3,
+    verify_parquet_folder_uploaded_to_s3,
+)
 from ticks_collector.ticker import TICKS_DIR
 from logging_config import *
 from scheduler import scheduler, schedule_jobs
@@ -26,7 +29,9 @@ app = fastapi.FastAPI(lifespan=lifespan)
 
 
 @app.post("/tasks/trigger-s3-upload", tags=["Tasks"], summary="Trigger S3 upload task")
-async def trigger_s3_upload(date: datetime.date | None = None):
+async def trigger_s3_upload(
+    date: datetime.date | None = None, delete_after_upload: bool = False
+):
     """Trigger upload of ticks data inside TICKS_DIR to S3"""
     # If a manual upload job already exists (pending or running), don't add another
     existing = scheduler.get_job("manual_s3_upload")
@@ -43,11 +48,12 @@ async def trigger_s3_upload(date: datetime.date | None = None):
 
     job = scheduler.add_job(
         upload_parquet_folder_to_s3,
-        args=[dir_to_upload],
+        args=[dir_to_upload, delete_after_upload],
         id="manual_s3_upload",
         max_instances=1,
         replace_existing=False,
     )
+
     return {"message": "S3 upload queued", "job_id": job.id}
 
 

@@ -1,4 +1,5 @@
 import os
+import shutil
 import boto3
 from .ticker import TICKS_DIR
 import pathlib
@@ -23,34 +24,6 @@ def _sha256_of_file(file_path: pathlib.Path) -> str:
     return h.hexdigest()
 
 
-def upload_parquet_folder_to_s3(dir: str):
-    # Implement the logic to upload the ticks folder to S3
-    bucket_name = "ticks-data-bucket"
-    dir: pathlib.Path = pathlib.Path(dir)
-    ticks_root_dir = pathlib.Path(TICKS_DIR)
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        for file_path in dir.rglob("*.parquet"):
-            s3_key = file_path.relative_to(ticks_root_dir)
-            # Upload parquet file
-            futures.append(
-                executor.submit(
-                    upload_file_to_s3, file_path, bucket_name, s3_key.as_posix()
-                )
-            )
-        total_files = len(futures)
-        logger.info(f"Starting upload of {total_files} files to S3 from {dir}")
-
-        for idx, future in enumerate(as_completed(futures)):
-            try:
-                future.result()
-                logger.info(f"Uploaded {idx + 1}/{total_files} files to S3")
-            except Exception as e:
-                logger.error(f"Error uploading file: {e}")
-                raise e
-
-
 def verify_parquet_folder_uploaded_to_s3(dir: str) -> bool:
     """Verify all local parquet files under `dir` exist in S3.
 
@@ -68,7 +41,9 @@ def verify_parquet_folder_uploaded_to_s3(dir: str) -> bool:
         logger.warning(f"No parquet files found to verify in {dir_path}")
         return False
 
-    logger.info(f"Verifying {len(local_files)} parquet files exist in s3://{bucket_name}")
+    logger.info(
+        f"Verifying {len(local_files)} parquet files exist in s3://{bucket_name}"
+    )
 
     all_ok = True
     for fp in local_files:
@@ -100,3 +75,35 @@ def verify_parquet_folder_uploaded_to_s3(dir: str) -> bool:
         logger.warning(f"Verification failed for one or more files under {dir_path}")
 
     return all_ok
+
+
+def upload_parquet_folder_to_s3(dir: str, delete_after_upload: bool):
+    # Implement the logic to upload the ticks folder to S3
+    bucket_name = "ticks-data-bucket"
+    dir: pathlib.Path = pathlib.Path(dir)
+    ticks_root_dir = pathlib.Path(TICKS_DIR)
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for file_path in dir.rglob("*.parquet"):
+            s3_key = file_path.relative_to(ticks_root_dir)
+            # Upload parquet file
+            futures.append(
+                executor.submit(
+                    upload_file_to_s3, file_path, bucket_name, s3_key.as_posix()
+                )
+            )
+        total_files = len(futures)
+        logger.info(f"Starting upload of {total_files} files to S3 from {dir}")
+
+        for idx, future in enumerate(as_completed(futures)):
+            try:
+                future.result()
+                logger.info(f"Uploaded {idx + 1}/{total_files} files to S3")
+            except Exception as e:
+                logger.error(f"Error uploading file: {e}")
+                raise e
+
+    if delete_after_upload and verify_parquet_folder_uploaded_to_s3(dir):
+        shutil.rmtree(dir)
+        logger.info(f"Deleted local directory {dir} after upload to S3.")

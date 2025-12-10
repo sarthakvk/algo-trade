@@ -69,9 +69,9 @@ class Ticker:
             for _ in range(3)
         ]
         self.writer = StreamingParquetWriter(
-                base_path="ticks/",
-                schema=get_tick_schema(),
-            )
+            base_path="ticks/",
+            schema=get_tick_schema(),
+        )
 
     def get_batched_instrument_tokens(self, exchange: str = "NSE") -> list[list[int]]:
         instrument_tokens = [

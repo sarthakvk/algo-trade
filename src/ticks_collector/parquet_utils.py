@@ -19,6 +19,7 @@ def get_tick_schema() -> pa.Schema:
     with open(schema_path, "rb") as f:
         return pickle.load(f)
 
+
 def get_today_ds(tz: timezone | None = None) -> str:
     """Returns today's date string in YYYY-MM-DD format."""
     return f"date={(datetime.now(tz=tz).strftime('%Y-%m-%d'))}"
@@ -112,6 +113,8 @@ class StreamingParquetWriter:
                 self.rows_written += table.num_rows
                 logger.info(f"Wrote {table.num_rows} rows to Parquet.")
             except Exception:
-                logger.exception(f"Error writing rows to Parquet (batch_size={len(rows) if rows else 0})")
+                logger.exception(
+                    f"Error writing rows to Parquet (batch_size={len(rows) if rows else 0})"
+                )
             finally:
                 self._queue.task_done()

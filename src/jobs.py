@@ -1,7 +1,11 @@
 from datetime import datetime
 import os
-from ticks_collector.s3_utils import upload_parquet_folder_to_s3
+from ticks_collector.s3_utils import (
+    upload_parquet_folder_to_s3,
+    verify_parquet_folder_uploaded_to_s3,
+)
 from ticks_collector.ticker import TICKS_DIR, Ticker, is_trading_day
+from ticks_collector.parquet_utils import get_today_ds
 from app_config import ZONEINFO
 from time import sleep
 import logging
@@ -13,12 +17,11 @@ logger = logging.getLogger(__name__)
 def drop_ticks_from_disk_after_verification():
     """Verify that today's ticks have been uploaded to S3, then delete local files."""
 
-    today_dir_name = f"date={(datetime.now().strftime('%Y-%m-%d'))}"
+    today_dir_name = get_today_ds(ZONEINFO)
     today_dir_path = os.path.join(TICKS_DIR, today_dir_name)
 
-    # Here you would implement verification logic to check S3 for the files.
-    # For simplicity, we'll assume verification is successful.
-    verification_successful = False  # TODO: Implement actual verification logic
+    # Verify all parquet files for today exist in S3
+    verification_successful = verify_parquet_folder_uploaded_to_s3(today_dir_path)
 
     if verification_successful:
         import shutil
@@ -32,7 +35,7 @@ def drop_ticks_from_disk_after_verification():
 
 
 def upload_ticks_to_s3(scheduler: BackgroundScheduler):
-    today_dir_name = f"date={(datetime.now().strftime('%Y-%m-%d'))}"
+    today_dir_name = get_today_ds(ZONEINFO)
     today_dir_path = os.path.join(TICKS_DIR, today_dir_name)
     logger.info(f"Uploading ticks from {today_dir_path} to S3...")
     upload_parquet_folder_to_s3(today_dir_path)

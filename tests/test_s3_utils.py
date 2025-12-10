@@ -3,6 +3,7 @@ import tempfile
 import pathlib
 from unittest.mock import patch, MagicMock
 from ticks_collector.s3_utils import upload_file_to_s3, upload_parquet_folder_to_s3
+from ticks_collector.ticker import TICKS_DIR
 
 
 @patch("boto3.client")
@@ -19,7 +20,8 @@ def test_upload_file_to_s3(mock_boto_client):
 
 @patch("ticks_collector.s3_utils.upload_file_to_s3")
 def test_upload_parquet_folder_to_s3(mock_upload):
-    with tempfile.TemporaryDirectory() as tmpdir:
+    # Create temp directory under TICKS_DIR so relative_to works
+    with tempfile.TemporaryDirectory(dir=TICKS_DIR) as tmpdir:
         tmp_path = pathlib.Path(tmpdir)
 
         # create fake parquet files
@@ -35,4 +37,5 @@ def test_upload_parquet_folder_to_s3(mock_upload):
         assert mock_upload.call_count == 3
 
         called_keys = [c.args[2] for c in mock_upload.call_args_list]
-        assert "a.parquet" in called_keys[0]
+        # Ensure keys end with parquet file names
+        assert any(k.endswith("a.parquet") for k in called_keys)

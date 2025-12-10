@@ -1,6 +1,7 @@
 import os
 import random
 from datetime import datetime, timedelta, timezone
+import time
 from kiteconnect import KiteConnect, KiteTicker
 import pyotp
 from .kite_utils import KiteSecrets, get_request_token
@@ -51,9 +52,7 @@ class Ticker:
     def __init__(self):
         # Initialise writer once; do not recreate on token refresh
         self._connected = [False] * 3
-        self.refresh_token()
 
-    def refresh_token(self):
         # Refresh session and rebuild tickers with new access token
         self.kite = KiteConnect(api_key=KiteSecrets.ApiKey.value)
         self.totp = pyotp.TOTP(KiteSecrets.TOTP_SECRET.value)
@@ -64,30 +63,17 @@ class Ticker:
             self.request_token, api_secret=KiteSecrets.ApiSecret.value
         )
         self.kite.set_access_token(self.session_info["access_token"])
-        # Close any existing sockets before recreating
-        try:
-            for t in getattr(self, "tickers", []):
-                try:
-                    t.close(code=1000, reason="refresh_token")
-                except Exception:
-                    pass
-        finally:
-            self.tickers = [
-                KiteTicker(KiteSecrets.ApiKey.value, self.session_info["access_token"])
-                for _ in range(3)
-            ]
-            self.writers = [
-                StreamingParquetWriter(
-                    base_path="ticks/",
-                    schema=get_tick_schema(),
-                )
-                for _ in range(3)
-            ]
 
-    @lru_cache(maxsize=1)
-    def get_batched_instrument_tokens(
-        self, exchange: str = "NSE", batch_size: int = 3000
-    ) -> list[list[int]]:
+        self.tickers = [
+            KiteTicker(KiteSecrets.ApiKey.value, self.session_info["access_token"])
+            for _ in range(3)
+        ]
+        self.writer = StreamingParquetWriter(
+                base_path="ticks/",
+                schema=get_tick_schema(),
+            )
+
+    def get_batched_instrument_tokens(self, exchange: str = "NSE") -> list[list[int]]:
         instrument_tokens = [
             instrument["instrument_token"]
             for instrument in self.kite.instruments(exchange=exchange)
@@ -97,7 +83,7 @@ class Ticker:
         random.shuffle(instrument_tokens)
 
         logger.info(f"Total instrument tokens fetched: {len(instrument_tokens)}")
-        return list(batched(instrument_tokens, batch_size))
+        return list(batched(instrument_tokens, len(instrument_tokens) // len(self.tickers)))  # type: ignore
 
     def start(self):
         # Connect once per ticker; avoid spawning new threads in a loop
@@ -121,12 +107,14 @@ class Ticker:
                 ticker.close(code=1000, reason="stop")
                 logger.info(f"Ticker {idx} stopped.")
         finally:
-            for writer in self.writers:
-                writer.close()
+            self.writer.close()
 
     # Callback methods
     def on_ticks(self, idx, ws, ticks):
-        self.writers[idx].write_rows(ticks)
+        # Log every minute, to avoid flooding logs
+        if time.time() % 60 == 0:
+            logger.debug(f"Ticker {idx} received {len(ticks)} ticks")
+        self.writer.write_rows(ticks)
 
     def on_connect(self, ins_tokens, idx, ws, response):
         ws.subscribe(ins_tokens)

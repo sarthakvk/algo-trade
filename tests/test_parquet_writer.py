@@ -276,3 +276,19 @@ def test_large_batch_single_file(tmp_path):
     table = pq.read_table(path)
     assert table.num_rows == 135
     assert_compression_is(path, "SNAPPY")
+
+
+def test_writer_is_closed_after_close(tmp_path):
+    base = str(tmp_path)
+    writer = StreamingParquetWriter(
+        base_path=base,
+        schema=schema_sample(),
+        compression="ZSTD",
+    )
+
+    # No writes necessary; just ensure resources close properly
+    writer.close()
+
+    # ParquetWriter exposes `is_open`; should be False after close
+    assert hasattr(writer, "writer"), "Writer should have underlying ParquetWriter"
+    assert not writer.writer.is_open, "Underlying ParquetWriter should be closed after close()"

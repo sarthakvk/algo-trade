@@ -52,7 +52,7 @@ class StreamingParquetWriter:
             self.base_path,
             get_today_ds(),
         )
-        os.makedirs(self.today_partition_dir, exist_ok=False)
+        os.makedirs(self.today_partition_dir, exist_ok=True)
 
         self.schema = schema
 

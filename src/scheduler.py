@@ -20,7 +20,7 @@ jobs_schedule = [
         "func": ticks_collector_job,
         "trigger": "cron",
         "hour": 9,
-        "minute": 10,
+        "minute": 13,
         "timezone": ZONEINFO,
         "id": "ticks_collector_job",
         "args": [scheduler],

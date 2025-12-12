@@ -63,11 +63,9 @@ async def trigger_ticks_collector():
     """Trigger upload of ticks data inside TICKS_DIR to S3"""
     # If a manual upload job already exists (pending or running), don't add another
     existing = scheduler.get_job("ticks_collector_job")
+
     if existing is not None:
-        raise fastapi.HTTPException(
-            status_code=409,
-            detail="Scheduled ticks collector is already scheduled or running",
-        )
+        scheduler.remove_job("ticks_collector_job")
 
     manual_ticks_collector = scheduler.get_job("manual_ticks_collector_job")
     if manual_ticks_collector is not None:

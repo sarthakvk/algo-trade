@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import datetime
 import fastapi
+from jobs import ticks_collector_job
 from scheduler import schedule_jobs
 from ticks_collector.s3_utils import (
     upload_parquet_folder_to_s3,
@@ -56,6 +57,34 @@ async def trigger_s3_upload(
 
     return {"message": "S3 upload queued", "job_id": job.id}
 
+
+@app.post("/tasks/trigger-ticks-collector", tags=["Tasks"], summary="Trigger ticks collector task")
+async def trigger_ticks_collector():
+    """Trigger upload of ticks data inside TICKS_DIR to S3"""
+    # If a manual upload job already exists (pending or running), don't add another
+    existing = scheduler.get_job("ticks_collector_job")
+    if existing is not None:
+        raise fastapi.HTTPException(
+            status_code=409,
+            detail="Scheduled ticks collector is already scheduled or running",
+        )
+
+    manual_ticks_collector = scheduler.get_job("manual_ticks_collector_job")
+    if manual_ticks_collector is not None:
+        raise fastapi.HTTPException(
+            status_code=409,
+            detail="Manual ticks collector is already scheduled or running",
+        )
+
+    job = scheduler.add_job(
+        ticks_collector_job,
+        args=[scheduler],
+        id="manual_ticks_collector_job",
+        max_instances=1,
+        replace_existing=False,
+    )
+
+    return {"message": "Ticks collector queued", "job_id": job.id}
 
 @app.get("/jobs/{job_id}", tags=["Tasks"], summary="Get job status")
 async def get_job_status(job_id: str):

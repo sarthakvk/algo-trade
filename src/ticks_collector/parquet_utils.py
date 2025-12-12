@@ -115,7 +115,7 @@ class StreamingParquetWriter:
                 self.rows_written += table.num_rows
 
                 if time.time() % 60 == 0:
-                    logger.info(f"Wrote {table.num_rows} rows to Parquet.")
+                    logger.info(f"Wrote {self.rows_written} rows to Parquet file.")
             except Exception:
                 logger.exception(
                     f"Error writing rows to Parquet (batch_size={len(rows) if rows else 0})"

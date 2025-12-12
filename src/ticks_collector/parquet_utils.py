@@ -3,12 +3,13 @@ import pickle
 import threading
 from datetime import datetime, timezone
 import queue
-import time
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import logging
 import uuid
+from collections import deque
+from typing import Deque
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class StreamingParquetWriter:
         base_path: str,
         schema: pa.Schema,
         compression: str = "ZSTD",
+        batch_size: int = 10000,
     ):
         """
         Args:
@@ -65,6 +67,8 @@ class StreamingParquetWriter:
         )
         self.is_open = True
         self.rows_written = 0
+        self._batch_size = batch_size
+        self._buffer: Deque[dict] = deque()
 
         self._queue = queue.Queue()
         self._thread = threading.Thread(target=self._write_worker, daemon=True)
@@ -104,21 +108,34 @@ class StreamingParquetWriter:
         while True:
             rows = self._queue.get()
             try:
-
-                # Sentinel to stop the thread
+                # Sentinel to stop the thread: flush remaining buffer then exit
                 if rows is None:
+                    if self._buffer:
+                        # Flush remaining buffer in final partial batch
+                        table: pa.Table = pa.Table.from_pylist(self._buffer, schema=self.schema)
+                        self.writer.write_table(table)
+                        self.rows_written += table.num_rows
+                        self._buffer.clear()
                     logger.info("Stopping Parquet writer thread.")
                     break
 
-                table: pa.Table = pa.Table.from_pylist(rows, schema=self.schema)
-                self.writer.write_table(table)
-                self.rows_written += table.num_rows
-
-                if time.time() % 60 == 0:
-                    logger.info(f"Wrote {self.rows_written} rows to Parquet file.")
+                # Accumulate rows and flush exactly batch_size at a time to keep memory bounded
+                if rows is not None:
+                    if len(rows) == 0:
+                        # Write explicit empty batch to ensure empty file is readable
+                        empty_table: pa.Table = pa.Table.from_pylist([], schema=self.schema)
+                        self.writer.write_table(empty_table)
+                    else:
+                        self._buffer.extend(rows)
+                        if len(self._buffer) >= self._batch_size:
+                            table: pa.Table = pa.Table.from_pylist(self._buffer, schema=self.schema)
+                            self.writer.write_table(table)
+                            self.rows_written += table.num_rows
+                            self._buffer.clear()
+                            logger.info(f"Wrote {self.rows_written} rows to Parquet file.")
             except Exception:
                 logger.exception(
-                    f"Error writing rows to Parquet (batch_size={len(rows) if rows else 0})"
+                    f"Error writing rows to Parquet (incoming_rows={len(rows) if rows is not None else 0}, buffer_size={len(self._buffer)})"
                 )
             finally:
                 self._queue.task_done()

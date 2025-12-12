@@ -10,6 +10,7 @@ from itertools import batched
 from functools import partial, lru_cache
 import logging
 import requests
+import random
 from app_config import BASE_DIR
 
 logger = logging.getLogger(__name__)
@@ -116,7 +117,7 @@ class Ticker:
     # Callback methods
     def on_ticks(self, idx, ws, ticks):
         # Log every minute, to avoid flooding logs
-        if time.time() % 60 == 0:
+        if random.randint(1, 60) == 1:
             logger.debug(f"Ticker {idx} received {len(ticks)} ticks")
         self.writers[idx].write_rows(ticks)
 

@@ -7,6 +7,7 @@ import queue
 import pyarrow as pa
 import pyarrow.parquet as pq
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class StreamingParquetWriter:
         self.compression = compression
 
         self.writer: pq.ParquetWriter = pq.ParquetWriter(
-            os.path.join(self.today_partition_dir, "ticks.parquet"),
+            os.path.join(self.today_partition_dir, f"ticks_{uuid.uuid4().hex}.parquet"),
             self.schema,
             compression=self.compression,
         )

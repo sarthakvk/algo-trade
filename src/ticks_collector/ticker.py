@@ -68,10 +68,13 @@ class Ticker:
             KiteTicker(KiteSecrets.ApiKey.value, self.session_info["access_token"])
             for _ in range(3)
         ]
-        self.writer = StreamingParquetWriter(
-            base_path="ticks/",
-            schema=get_tick_schema(),
-        )
+        self.writers = [
+            StreamingParquetWriter(
+                base_path="ticks/",
+                schema=get_tick_schema(),
+            )
+            for _ in range(3)
+        ]
 
     def get_batched_instrument_tokens(self, exchange: str = "NSE") -> list[list[int]]:
         instrument_tokens = [
@@ -107,14 +110,15 @@ class Ticker:
                 ticker.close(code=1000, reason="stop")
                 logger.info(f"Ticker {idx} stopped.")
         finally:
-            self.writer.close()
+            for writer in self.writers:
+                writer.close()
 
     # Callback methods
     def on_ticks(self, idx, ws, ticks):
         # Log every minute, to avoid flooding logs
         if time.time() % 60 == 0:
             logger.debug(f"Ticker {idx} received {len(ticks)} ticks")
-        self.writer.write_rows(ticks)
+        self.writers[idx].write_rows(ticks)
 
     def on_connect(self, ins_tokens, idx, ws, response):
         ws.subscribe(ins_tokens)

@@ -10,6 +10,7 @@ from ticks_collector.s3_utils import (
 from ticks_collector.ticker import TICKS_DIR
 from logging_config import *
 from scheduler import scheduler, schedule_jobs
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,13 @@ async def lifespan(app: fastapi.FastAPI):
 
 
 app = fastapi.FastAPI(lifespan=lifespan)
+
+
+@app.post("/tasks/stop-ec2-instance", tags=["Tasks"], summary="Stop EC2 instance")
+async def stop_ec2_instance():
+    ec2 = boto3.client("ec2", region_name="ap-south-1")
+    ec2.stop_instances(InstanceIds=["i-06292056bc42c0316"])
+    return {"message": "EC2 instance stop initiated"}
 
 
 @app.post("/tasks/trigger-s3-upload", tags=["Tasks"], summary="Trigger S3 upload task")
@@ -58,7 +66,11 @@ async def trigger_s3_upload(
     return {"message": "S3 upload queued", "job_id": job.id}
 
 
-@app.post("/tasks/trigger-ticks-collector", tags=["Tasks"], summary="Trigger ticks collector task")
+@app.post(
+    "/tasks/trigger-ticks-collector",
+    tags=["Tasks"],
+    summary="Trigger ticks collector task",
+)
 async def trigger_ticks_collector():
     """Trigger upload of ticks data inside TICKS_DIR to S3"""
     # If a manual upload job already exists (pending or running), don't add another
@@ -83,6 +95,7 @@ async def trigger_ticks_collector():
     )
 
     return {"message": "Ticks collector queued", "job_id": job.id}
+
 
 @app.get("/jobs/{job_id}", tags=["Tasks"], summary="Get job status")
 async def get_job_status(job_id: str):

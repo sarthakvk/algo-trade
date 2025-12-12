@@ -10,6 +10,7 @@ from app_config import ZONEINFO
 from time import sleep
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,11 @@ def upload_ticks_to_s3(scheduler: BackgroundScheduler):
     today_dir_path = os.path.join(TICKS_DIR, today_dir_name)
     logger.info(f"Uploading ticks from {today_dir_path} to S3...")
     upload_parquet_folder_to_s3(today_dir_path, True)
+
+    # stop ec2 instance after upload
+    ec2 = boto3.client("ec2", region_name="ap-south-1")
+
+    ec2.stop_instances(InstanceIds=["i-06292056bc42c0316"])
 
 
 def ticks_collector_job(scheduler: BackgroundScheduler):

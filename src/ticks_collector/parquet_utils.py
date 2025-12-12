@@ -112,7 +112,9 @@ class StreamingParquetWriter:
                 if rows is None:
                     if self._buffer:
                         # Flush remaining buffer in final partial batch
-                        table: pa.Table = pa.Table.from_pylist(self._buffer, schema=self.schema)
+                        table: pa.Table = pa.Table.from_pylist(
+                            self._buffer, schema=self.schema
+                        )
                         self.writer.write_table(table)
                         self.rows_written += table.num_rows
                         self._buffer.clear()
@@ -123,16 +125,22 @@ class StreamingParquetWriter:
                 if rows is not None:
                     if len(rows) == 0:
                         # Write explicit empty batch to ensure empty file is readable
-                        empty_table: pa.Table = pa.Table.from_pylist([], schema=self.schema)
+                        empty_table: pa.Table = pa.Table.from_pylist(
+                            [], schema=self.schema
+                        )
                         self.writer.write_table(empty_table)
                     else:
                         self._buffer.extend(rows)
                         if len(self._buffer) >= self._batch_size:
-                            table: pa.Table = pa.Table.from_pylist(self._buffer, schema=self.schema)
+                            table: pa.Table = pa.Table.from_pylist(
+                                self._buffer, schema=self.schema
+                            )
                             self.writer.write_table(table)
                             self.rows_written += table.num_rows
                             self._buffer.clear()
-                            logger.info(f"Wrote {self.rows_written} rows to Parquet file.")
+                            logger.info(
+                                f"Wrote {self.rows_written} rows to Parquet file."
+                            )
             except Exception:
                 logger.exception(
                     f"Error writing rows to Parquet (incoming_rows={len(rows) if rows is not None else 0}, buffer_size={len(self._buffer)})"

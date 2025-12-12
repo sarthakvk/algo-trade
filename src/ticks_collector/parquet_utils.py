@@ -3,6 +3,7 @@ import pickle
 import threading
 from datetime import datetime, timezone
 import queue
+import time
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -112,7 +113,9 @@ class StreamingParquetWriter:
                 table: pa.Table = pa.Table.from_pylist(rows, schema=self.schema)
                 self.writer.write_table(table)
                 self.rows_written += table.num_rows
-                logger.info(f"Wrote {table.num_rows} rows to Parquet.")
+
+                if time.time() % 60 == 0:
+                    logger.info(f"Wrote {table.num_rows} rows to Parquet.")
             except Exception:
                 logger.exception(
                     f"Error writing rows to Parquet (batch_size={len(rows) if rows else 0})"

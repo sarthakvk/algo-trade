@@ -40,7 +40,7 @@ class StreamingParquetWriter:
         base_path: str,
         schema: pa.Schema,
         compression: str = "ZSTD",
-        batch_size: int = 10000,
+        batch_size: int = 50000,
     ):
         """
         Args:
@@ -54,14 +54,15 @@ class StreamingParquetWriter:
             self.base_path,
             get_today_ds(),
         )
-        os.makedirs(self.today_partition_dir, exist_ok=True)
+        # Only 1 writer for a day's partition
+        os.makedirs(self.today_partition_dir, exist_ok=False)
 
         self.schema = schema
 
         self.compression = compression
 
         self.writer: pq.ParquetWriter = pq.ParquetWriter(
-            os.path.join(self.today_partition_dir, f"ticks_{uuid.uuid4().hex}.parquet"),
+            os.path.join(self.today_partition_dir, f"ticks.parquet"),
             self.schema,
             compression=self.compression,
         )
@@ -69,8 +70,9 @@ class StreamingParquetWriter:
         self.rows_written = 0
         self._batch_size = batch_size
         self._buffer: Deque[dict] = deque()
-
-        self._queue = queue.Queue()
+        
+        # Add Backpressure queue to limit memory usage
+        self._queue = queue.Queue(maxsize=batch_size * 5)
         self._thread = threading.Thread(target=self._write_worker, daemon=True)
         self._thread.start()
 
@@ -81,6 +83,8 @@ class StreamingParquetWriter:
         """Add multiple rows at once (list of dicts)."""
         if not self.is_open:
             raise RuntimeError("Parquet writer is not open.")
+        if self._queue.full():
+            logger.warning("Parquet writer queue is full; waiting to enqueue rows.")
         self._queue.put(rows)
 
     def close(self):
@@ -139,7 +143,7 @@ class StreamingParquetWriter:
                             self.rows_written += table.num_rows
                             self._buffer.clear()
                             logger.info(
-                                f"Wrote {self.rows_written} rows to Parquet file."
+                                f"Wrote {table.num_rows} rows to Parquet file."
                             )
             except Exception:
                 logger.exception(

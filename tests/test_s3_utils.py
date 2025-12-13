@@ -35,7 +35,7 @@ def test_upload_parquet_folder_to_s3(mock_upload):
         sub.mkdir()
         (sub / "c.parquet").write_text("test")
 
-        upload_parquet_folder_to_s3(tmpdir)
+        upload_parquet_folder_to_s3(tmpdir, False)
 
         # Expect 3 uploads
         assert mock_upload.call_count == 3
@@ -59,7 +59,7 @@ def test_verify_streams_remote_and_succeeds(mock_boto_client):
         fp.write_bytes(b"hello parquet")
 
         # Upload folder (parquet files only)
-        upload_parquet_folder_to_s3(tmpdir)
+        upload_parquet_folder_to_s3(tmpdir, False)
         # Prepare verification: stream remote content in chunks matching local
         class _StreamingBody:
             def iter_chunks(self, chunk_size=1024 * 1024):

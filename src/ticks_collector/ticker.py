@@ -105,7 +105,7 @@ class Ticker:
         try:
             for idx, ticker in enumerate(self.tickers):
                 logger.info(f"Stopping ticker {idx}...")
-                ticker.close(code=1000, reason="stop")
+                ticker.close(code=1000, reason="Shutting down")
                 logger.info(f"Ticker {idx} stopped.")
         finally:
             self.writer.close()
@@ -125,6 +125,7 @@ class Ticker:
 
     def on_close(self, idx, ws, code, reason):
         # Callback when connection is closed
+        self.tickers[idx].stop()
         self._connected[idx] = False
         logger.info(f"Ticker {idx} connection closed: {code} - {reason}")
 

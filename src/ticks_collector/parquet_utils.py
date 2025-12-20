@@ -70,7 +70,7 @@ class StreamingParquetWriter:
         self.rows_written = 0
         self._batch_size = batch_size
         self._buffer: Deque[dict] = deque()
-        
+
         # Add Backpressure queue to limit memory usage
         self._queue = queue.Queue(maxsize=batch_size * 5)
         self._thread = threading.Thread(target=self._write_worker, daemon=True)
@@ -142,9 +142,7 @@ class StreamingParquetWriter:
                             self.writer.write_table(table)
                             self.rows_written += table.num_rows
                             self._buffer.clear()
-                            logger.info(
-                                f"Wrote {table.num_rows} rows to Parquet file."
-                            )
+                            logger.info(f"Wrote {table.num_rows} rows to Parquet file.")
             except Exception:
                 logger.exception(
                     f"Error writing rows to Parquet (incoming_rows={len(rows) if rows is not None else 0}, buffer_size={len(self._buffer)})"

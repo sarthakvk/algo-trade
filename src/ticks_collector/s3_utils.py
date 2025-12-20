@@ -86,7 +86,9 @@ def upload_parquet_folder_to_s3(dir: str, delete_after_upload: bool):
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = []
         for file_path in dir.rglob("*.parquet"):
-            s3_key = pathlib.Path(ticks_root_dir.name) / file_path.relative_to(ticks_root_dir)
+            s3_key = pathlib.Path(ticks_root_dir.name) / file_path.relative_to(
+                ticks_root_dir
+            )
             # Upload parquet file
             futures.append(
                 executor.submit(

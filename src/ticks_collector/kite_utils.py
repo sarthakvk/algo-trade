@@ -55,3 +55,17 @@ def get_request_token(
         return parse_qs(urlparse(finish_resp.headers["location"]).query)[
             "request_token"
         ][0]
+
+
+def get_initialized_kite() -> KiteConnect:
+    """Returns an initialized KiteConnect instance with a valid access token."""
+    kite = KiteConnect(api_key=KiteSecrets.ApiKey.value)
+    totp = pyotp.TOTP(KiteSecrets.TOTP_SECRET.value)
+    request_token = get_request_token(
+        KiteSecrets.UserId.value, KiteSecrets.Password.value, kite, totp
+    )
+    session_info = kite.generate_session(
+        request_token, api_secret=KiteSecrets.ApiSecret.value
+    )
+    kite.set_access_token(session_info["access_token"])
+    return kite

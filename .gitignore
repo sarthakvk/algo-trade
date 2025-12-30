@@ -4,9 +4,6 @@
 # Pytest cache
 .pytest_cache/
 
-# Data files
-data/
-
 # Python cache
 src/__pycache__/
 __pycache__/
@@ -37,5 +34,3 @@ dist/
 logs/
 
 *.sqlite3
-
-notebooks/

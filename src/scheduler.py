@@ -25,6 +25,7 @@ jobs_schedule = [
         "timezone": ZONEINFO,
         "id": "ticks_collector_job",
         "args": [scheduler],
+        "misfire_grace_time": None,
     },
 ]
 
@@ -44,5 +45,5 @@ def schedule_jobs(scheduler: BackgroundScheduler):
                 continue
 
         logger.info(f"Scheduling job: {job['id']}")
-        func = job.pop("func")
+        func = job["func"]
         scheduler.add_job(func, **job)

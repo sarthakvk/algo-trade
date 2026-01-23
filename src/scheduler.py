@@ -45,5 +45,5 @@ def schedule_jobs(scheduler: BackgroundScheduler):
                 continue
 
         logger.info(f"Scheduling job: {job['id']}")
-        func = job["func"]
+        func = job.pop("func")
         scheduler.add_job(func, **job)

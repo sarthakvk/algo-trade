@@ -127,7 +127,3 @@ tests/                         # pytest unit tests
 scripts/                       # Performance benchmarks
 notebooks/                     # Jupyter notebooks for analysis and backtesting
 ```
-
-## License
-
-MIT
